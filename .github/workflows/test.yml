@@ -1,4 +1,4 @@
-name: Test this action
+name: CI
 on:
   pull_request:
   push:
@@ -230,6 +230,28 @@ jobs:
         rubygems: 3.2.3
     - run: gem --version | grep -F "3.3.3"
 
+  testFixedRubygemsBetaVersionUpgrades:
+    name: "Test rubygems: beta version upgrades RubyGems to that version if the default is older"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+    - uses: ./
+      with:
+        ruby-version: '4.0.7'
+        rubygems: 4.1.0.beta2
+    - run: gem --version | grep -F "4.1.0.beta2"
+
+  testFixedRubygemsBetaVersionNoop:
+    name: "Test rubygems: beta version noops if the default is newer"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+    - uses: ./
+      with:
+        ruby-version: '4.0.7'
+        rubygems: 4.0.0.beta2
+    - run: gem --version | grep -F "4.0.20"
+
   testUseBundlerFromRubyGemsUpdate:
     name: "Test rubygems: version uses the Bundler installed by the rubygems update"
     runs-on: ubuntu-latest
@@ -387,3 +409,37 @@ jobs:
     - run: yarn run package
     - name: Check generated files are up to date
       run: git diff --exit-code
+
+  result:
+    if: ${{ always() }}
+    name: Result
+    runs-on: ubuntu-latest
+    needs:
+      - test-matrix
+      - test
+      - testDotRubyVersion
+      - testToolVersions
+      - testMise
+      - testNoGemfile
+      - testNoGemfileWithBundlerCache
+      - testLatestRubygemsVersion
+      - testFixedRubygemsVersionUpgrades
+      - testFixedRubygemsVersionNoop
+      - testFixedRubygemsBetaVersionUpgrades
+      - testFixedRubygemsBetaVersionNoop
+      - testUseBundlerFromRubyGemsUpdate
+      - testFixedBundlerVersionForOldRuby
+      - testMajorBundlerVersion
+      - testMinorBundlerVersion
+      - testExactBundlerVersion
+      - testOlderBundlerVersion
+      - testBundlerPre
+      - testBundlerDev
+      - testDependencyOnBundler1
+      - testGemfileMatrix
+      - testWindowsToolchain
+      - validate-windows-versions
+      - check-dist-index
+    steps:
+      - run: exit 1
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
